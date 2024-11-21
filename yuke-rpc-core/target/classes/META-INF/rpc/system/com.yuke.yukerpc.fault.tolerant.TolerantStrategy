@@ -1,0 +1,4 @@
+failBack=com.yuke.yukerpc.fault.tolerant.FailBackTolerantStrategy
+failFast=com.yuke.yukerpc.fault.tolerant.FailFastTolerantStrategy
+failOver=com.yuke.yukerpc.fault.tolerant.FailOverTolerantStrategy
+failSafe=com.yuke.yukerpc.fault.tolerant.FailSafeTolerantStrategy

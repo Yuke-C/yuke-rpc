@@ -1,0 +1,2 @@
+json=com.yuke.yukerpc.serializer.JsonSerializer
+kryo=com.yuke.yukerpc.serializer.KryoSerializer

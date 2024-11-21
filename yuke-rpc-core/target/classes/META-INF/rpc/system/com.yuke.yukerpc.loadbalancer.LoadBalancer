@@ -1,0 +1,3 @@
+roundRobin=com.yuke.yukerpc.loadbalancer.RoundRobinLoadBalancer
+random=com.yuke.yukerpc.loadbalancer.RandomLoadBalancer
+consistentHash=com.yuke.yukerpc.loadbalancer.ConsistentHashLoadBalancer

@@ -1,0 +1,2 @@
+jdk=com.yuke.yukerpc.serializer.JdkSerializer
+hessian=com.yuke.yukerpc.serializer.HessianSerializer

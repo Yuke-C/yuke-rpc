@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CompilerConfiguration">
+    <annotationProcessing>
+      <profile default="true" name="Default" enabled="true" />
+      <profile name="Maven default annotation processors profile" enabled="true">
+        <sourceOutputDir name="target/generated-sources/annotations" />
+        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
+        <outputRelativeToContentRoot value="true" />
+        <module name="yuke-rpc-core" />
+        <module name="example-provider" />
+        <module name="yuke-rpc-spring-boot-starter" />
+        <module name="example-consumer" />
+        <module name="example-common" />
+      </profile>
+    </annotationProcessing>
+    <bytecodeTargetLevel>
+      <module name="yuke-rpc-easy" target="11" />
+    </bytecodeTargetLevel>
+  </component>
+</project>

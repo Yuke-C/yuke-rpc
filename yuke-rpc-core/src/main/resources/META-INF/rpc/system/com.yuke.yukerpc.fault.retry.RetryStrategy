@@ -1,0 +1,2 @@
+no=com.yuke.yukerpc.fault.retry.NoRetryStrategy
+fixedInterval=com.yuke.yukerpc.fault.retry.FixedIntervalRetryStrategy
