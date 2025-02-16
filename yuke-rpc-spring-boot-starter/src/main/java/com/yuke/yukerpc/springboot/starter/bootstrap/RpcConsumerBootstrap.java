@@ -1,6 +1,7 @@
 package com.yuke.yukerpc.springboot.starter.bootstrap;
 
-import com.yuke.yukerpc.proxy.ServiceProxyFactory;
+import com.yuke.yukerpc.proxy.CglibServiceProxyFactory;
+import com.yuke.yukerpc.proxy.JDKServiceProxyFactory;
 import com.yuke.yukerpc.springboot.starter.annotation.RpcReference;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
@@ -37,7 +38,8 @@ public class RpcConsumerBootstrap implements BeanPostProcessor {
                     interfaceClass = field.getType();
                 }
                 field.setAccessible(true);
-                Object proxyObject = ServiceProxyFactory.getProxy(interfaceClass);
+                Object proxyObject = JDKServiceProxyFactory.getProxy(interfaceClass);
+//                Object proxyObject = CglibServiceProxyFactory.getProxy(interfaceClass);
                 try {
                     field.set(bean, proxyObject);
                     field.setAccessible(false);

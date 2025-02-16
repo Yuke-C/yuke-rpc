@@ -39,7 +39,7 @@ public class EtcdRegistry implements Registry{
     /**
      * 注册中心服务缓存
      */
-    private final RegistryServiceCache registryServiceCache=new RegistryServiceCache();
+    private final RegistryServiceMultiCache registryServiceCache=new RegistryServiceMultiCache();
 
     /**
      * 正在监听的key集合
@@ -89,8 +89,8 @@ public class EtcdRegistry implements Registry{
     @Override
     public List<ServiceMetaInfo> serviceDiscovery(String serviceKey) {
         //优先从缓存获取服务
-        List<ServiceMetaInfo> cacheServiceMetaInfoList = registryServiceCache.readCache();
-        if (cacheServiceMetaInfoList!=null){
+        List<ServiceMetaInfo> cacheServiceMetaInfoList = registryServiceCache.readCache(serviceKey);
+        if (cacheServiceMetaInfoList != null && cacheServiceMetaInfoList.size()!=0) {
             return cacheServiceMetaInfoList;
         }
 
@@ -108,12 +108,12 @@ public class EtcdRegistry implements Registry{
                     .map(keyValue -> {
                         String key = keyValue.getKey().toString(StandardCharsets.UTF_8);
                         //监听key的变化
-                        watch(key);
+                        watch(key,serviceKey);
                         String value = keyValue.getValue().toString(StandardCharsets.UTF_8);
                         return JSONUtil.toBean(value, ServiceMetaInfo.class);
                     }).collect(Collectors.toList());
 
-            registryServiceCache.writeCache(serviceMetaInfoList);
+            registryServiceCache.writeCache(serviceKey,serviceMetaInfoList);
             return serviceMetaInfoList;
         }catch (Exception e){
             throw new RuntimeException("获取服务列表失败",e);
@@ -175,7 +175,7 @@ public class EtcdRegistry implements Registry{
     }
 
     @Override
-    public void watch(String serviceNodeKey) {
+    public void watch(String serviceNodeKey,String serviceKey) {
         Watch watchClient = client.getWatchClient();
         boolean newWatch = watchingKeySet.add(serviceNodeKey);
         if(newWatch){
@@ -184,7 +184,7 @@ public class EtcdRegistry implements Registry{
                     switch (event.getEventType()){
                         //key删除时触发
                         case DELETE:
-                            registryServiceCache.clearCache();
+                            registryServiceCache.clearCache(serviceKey);
                             break;
                         case PUT:
                         default:

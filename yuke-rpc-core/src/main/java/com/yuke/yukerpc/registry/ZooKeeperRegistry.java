@@ -35,7 +35,7 @@ public class ZooKeeperRegistry implements Registry{
     /**
      * 注册中心服务缓存
      */
-    private final RegistryServiceCache registryServiceCache=new RegistryServiceCache();
+    private final RegistryServiceMultiCache registryServiceCache=new RegistryServiceMultiCache();
 
     /**
      * 正在监听的 key 集合
@@ -97,7 +97,7 @@ public class ZooKeeperRegistry implements Registry{
     @Override
     public List<ServiceMetaInfo> serviceDiscovery(String serviceKey) {
         // 优先从缓存获取服务
-        List<ServiceMetaInfo> cachedServiceMetaInfoList = registryServiceCache.readCache();
+        List<ServiceMetaInfo> cachedServiceMetaInfoList = registryServiceCache.readCache(serviceKey);
         if (cachedServiceMetaInfoList!=null){
             return cachedServiceMetaInfoList;
         }
@@ -110,7 +110,7 @@ public class ZooKeeperRegistry implements Registry{
                     .collect(Collectors.toList());
 
             // 写入服务缓存
-            registryServiceCache.writeCache(serviceMetaInfoList);
+            registryServiceCache.writeCache(serviceKey,serviceMetaInfoList);
             return serviceMetaInfoList;
         } catch (Exception e) {
             throw new RuntimeException("获取服务列表失败", e);
@@ -141,7 +141,7 @@ public class ZooKeeperRegistry implements Registry{
     }
 
     @Override
-    public void watch(String serviceNodeKey) {
+    public void watch(String serviceNodeKey,String serviceKey) {
         String watchKey = ZK_ROOT_PATH + "/" + serviceNodeKey;
         boolean newWatch = watchingKeySet.add(watchKey);
         if (newWatch){
@@ -150,8 +150,8 @@ public class ZooKeeperRegistry implements Registry{
             curatorCache.listenable().addListener(
                     CuratorCacheListener
                             .builder()
-                            .forDeletes(childData -> registryServiceCache.clearCache())
-                            .forChanges(((oldNode,node)->registryServiceCache.clearCache()))
+                            .forDeletes(childData -> registryServiceCache.clearCache(serviceKey))
+                            .forChanges(((oldNode,node)->registryServiceCache.clearCache(serviceKey)))
                     .build()
             );
         }

@@ -6,15 +6,13 @@ public interface UserService {
 
     /**
      * 获取用户
-     * @param user
+     * @param name
      * @return
      */
-    User getUser(User user);
+    String getUser(String name);
 
     /**
      * 新方法 - 获取数字
      */
-    default short getNumber(){
-        return 1;
-    }
+    short getNumber();
 }

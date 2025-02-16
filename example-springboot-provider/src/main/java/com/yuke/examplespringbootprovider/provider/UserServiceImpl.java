@@ -9,8 +9,13 @@ import org.springframework.stereotype.Service;
 @RpcService
 public class UserServiceImpl implements UserService {
     @Override
-    public User getUser(User user) {
-        System.out.println("用户名：" + user.getName());
-        return user;
+    public String getUser(String name) {
+        System.out.println("用户名：" + name);
+        return "provider:"+name;
+    }
+
+    @Override
+    public short getNumber() {
+        return 1;
     }
 }
