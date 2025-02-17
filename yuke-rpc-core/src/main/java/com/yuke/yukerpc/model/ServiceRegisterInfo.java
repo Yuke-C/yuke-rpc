@@ -20,5 +20,5 @@ public class ServiceRegisterInfo<T> {
     /**
      * 实现类
      */
-    private Class<? extends T> implClass;
+    private Object bean;
 }

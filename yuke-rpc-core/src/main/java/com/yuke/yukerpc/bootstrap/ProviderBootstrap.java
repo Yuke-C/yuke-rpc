@@ -29,7 +29,7 @@ public class ProviderBootstrap {
         for (ServiceRegisterInfo<?> serviceRegisterInfo : serviceRegisterInfoList) {
             String serviceName =serviceRegisterInfo.getServiceName();
             // 本地注册
-            LocalRegistry.register(serviceName,serviceRegisterInfo.getImplClass());
+            LocalRegistry.register(serviceName,serviceRegisterInfo.getBean());
 
             //注册服务到注册中心
             RegistryConfig registryConfig = rpcConfig.getRegistryConfig();
