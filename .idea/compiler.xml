@@ -8,15 +8,17 @@
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
         <module name="yuke-rpc-core" />
+        <module name="example-springboot-provider2" />
         <module name="example-springboot-provider" />
         <module name="example-springboot-consumer" />
-        <module name="example-provider" />
-        <module name="example-common" />
         <module name="yuke-rpc-spring-boot-starter" />
-        <module name="example-consumer" />
+        <module name="example-common" />
       </profile>
     </annotationProcessing>
     <bytecodeTargetLevel>
+      <module name="example-consumer" target="11" />
+      <module name="example-provider" target="11" />
+      <module name="example-springboot-consumer2" target="1.8" />
       <module name="yuke-rpc-easy" target="11" />
     </bytecodeTargetLevel>
   </component>

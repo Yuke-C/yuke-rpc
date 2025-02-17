@@ -43,7 +43,7 @@ public class RpcProviderBootstrap implements BeanPostProcessor {
             String serviceVersion = rpcService.serviceVersion();
             // 2. 注册服务
             // 本地注册
-            LocalRegistry.register(serviceName, beanClass);
+            LocalRegistry.register(serviceName, bean);
 
             // 全局配置
             final RpcConfig rpcConfig = RpcApplication.getRpcConfig();

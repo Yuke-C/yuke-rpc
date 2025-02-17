@@ -43,10 +43,19 @@ public class HttpServerHandler implements Handler<HttpServerRequest> {
             }
             try {
                 //获取要调用的服务实现类，通过反射调用
-                Class<?> implClass = LocalRegistry.get(rpcRequest.getServiceName());
-                Method method = implClass.getMethod(rpcRequest.getMethodName(), rpcRequest.getParameterTypes());
-//                Object result = method.invoke(implClass.newInstance(), rpcRequest.getArgs());
-                Object result = method.invoke(implClass.getDeclaredConstructor().newInstance(), rpcRequest.getArgs());
+                Object serviceImpl = LocalRegistry.get(rpcRequest.getServiceName());
+                if (serviceImpl == null) {
+                    throw new RuntimeException("服务未注册: " + rpcRequest.getServiceName());
+                }
+                // 通过实例反射调用方法
+                Method method = serviceImpl.getClass().getMethod(
+                        rpcRequest.getMethodName(),
+                        rpcRequest.getParameterTypes()
+                );
+                Object result = method.invoke(serviceImpl, rpcRequest.getArgs()); // 使用实例调用
+//                Class<?> implClass = LocalRegistry.get(rpcRequest.getServiceName());
+//                Method method = implClass.getMethod(rpcRequest.getMethodName(), rpcRequest.getParameterTypes());
+//                Object result = method.invoke(implClass.getDeclaredConstructor().newInstance(), rpcRequest.getArgs());
                 rpcResponse.setData(result);
                 rpcResponse.setDataType(method.getReturnType());
                 rpcResponse.setMessage("ok");

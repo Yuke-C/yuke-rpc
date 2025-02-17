@@ -9,15 +9,15 @@ public class LocalRegistry {
     /**
      * 注册信息存储
      */
-    public static final Map<String,Class<?>> map = new ConcurrentHashMap<>();
+    public static final Map<String,Object> map = new ConcurrentHashMap<>();
 
     /**
      * 注册服务
      * @param serviceName
-     * @param implClass
+     * @param bean
      */
-    public static void register(String serviceName,Class<?> implClass){
-        map.put(serviceName, implClass);
+    public static void register(String serviceName,Object bean){
+        map.put(serviceName, bean);
     }
 
     /**
@@ -25,7 +25,7 @@ public class LocalRegistry {
      * @param serviceName
      * @return
      */
-    public static Class<?> get(String serviceName){
+    public static Object get(String serviceName){
         return map.get(serviceName);
     }
 
