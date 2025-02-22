@@ -6,6 +6,7 @@ import com.yuke.yukerpc.model.RpcRequest;
 import com.yuke.yukerpc.model.RpcResponse;
 import com.yuke.yukerpc.model.ServiceMetaInfo;
 import com.yuke.yukerpc.protocol.*;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.net.NetClient;
@@ -15,6 +16,8 @@ import io.vertx.core.net.NetSocket;
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Vertx TCP 请求客户端
@@ -48,9 +51,10 @@ public class VertxTcpClient {
      * @throws InterruptedException
      * @throws ExecutionException
      */
-    public static RpcResponse doRequest(RpcRequest rpcRequest, ServiceMetaInfo serviceMetaInfo) throws InterruptedException, ExecutionException {
+    public static CompletableFuture<RpcResponse> doRequest(RpcRequest rpcRequest, ServiceMetaInfo serviceMetaInfo)  {
         // 发送 TCP 请求
         CompletableFuture<RpcResponse> responseFuture  = new CompletableFuture<>();
+        responseFuture.orTimeout(10, TimeUnit.SECONDS);
         NET_CLIENT.connect(serviceMetaInfo.getServicePort(), serviceMetaInfo.getServiceHost(),
                 result -> {
                     if (!result.succeeded()){
@@ -59,12 +63,13 @@ public class VertxTcpClient {
                         return;
                     }
                     NetSocket socket = result.result();
-                    //构造消息
-                    ProtocolMessage<RpcRequest> protocolMessage = buildMessage(rpcRequest);
+                    socket.exceptionHandler(e -> {
+                        responseFuture.completeExceptionally(e);
+                    });
                     //编码请求
                     try{
-                        Buffer encodeBuffer = ProtocolMessageEncoder.encode(protocolMessage);
-                        socket.write(encodeBuffer);
+                        //构造消息
+                        writeRequest(rpcRequest, socket);
                     }catch (IOException e){
                         responseFuture.completeExceptionally(new RuntimeException("协议消息编码错误", e));
                         return;
@@ -73,7 +78,8 @@ public class VertxTcpClient {
                     //接受响应
                     TcpBufferHandlerWrapper bufferHandlerWrapper = new TcpBufferHandlerWrapper(buffer -> {
                         try {
-                            ProtocolMessage<RpcResponse> rpcResponseProtocolMessage = (ProtocolMessage<RpcResponse>) ProtocolMessageDecoder.decode(buffer);
+                            ProtocolMessage<RpcResponse> rpcResponseProtocolMessage =
+                                    (ProtocolMessage<RpcResponse>) ProtocolMessageDecoder.decode(buffer);
                             responseFuture.complete(rpcResponseProtocolMessage.getBody());
                         } catch (IOException e) {
                             responseFuture.completeExceptionally(new RuntimeException("协议消息解码错误", e));
@@ -81,8 +87,13 @@ public class VertxTcpClient {
                     });
                     socket.handler(bufferHandlerWrapper);
                 });
-        RpcResponse rpcResponse = responseFuture.get();
-        return rpcResponse;
+        return responseFuture;
+    }
+
+    private static void writeRequest(RpcRequest rpcRequest, NetSocket socket) throws IOException {
+            ProtocolMessage<RpcRequest> protocolMessage = buildMessage(rpcRequest);
+            Buffer encodeBuffer = ProtocolMessageEncoder.encode(protocolMessage);
+            socket.write(encodeBuffer);
     }
 
     private static ProtocolMessage<RpcRequest> buildMessage(RpcRequest rpcRequest) {
