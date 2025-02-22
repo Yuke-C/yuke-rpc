@@ -9,6 +9,7 @@ import com.yuke.yukerpc.protocol.*;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.net.NetClient;
+import io.vertx.core.net.NetClientOptions;
 import io.vertx.core.net.NetSocket;
 
 import java.io.IOException;
@@ -20,6 +21,24 @@ import java.util.concurrent.ExecutionException;
  */
 public class VertxTcpClient {
 
+    private static final Vertx VERTX  = Vertx.vertx();
+
+    // 共享 NetClient 连接池配置
+    private static final NetClient NET_CLIENT = VERTX.createNetClient(
+            new NetClientOptions()
+                    .setConnectTimeout(5000) // 5秒连接超时
+                    .setReconnectInterval(1000) // 重试间隔
+                    .setReconnectAttempts(3) // 最大重试次数
+    );
+
+    // 全局关闭钩子
+    static {
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            System.out.println("Shutting down TCP client...");
+            NET_CLIENT.close();
+            VERTX.close().onSuccess(v -> System.out.println("Vertx closed successfully"));
+        }));
+    }
     /**
      * 发送请求
      *
@@ -31,10 +50,8 @@ public class VertxTcpClient {
      */
     public static RpcResponse doRequest(RpcRequest rpcRequest, ServiceMetaInfo serviceMetaInfo) throws InterruptedException, ExecutionException {
         // 发送 TCP 请求
-        Vertx vertx = Vertx.vertx();
-        NetClient netClient = vertx.createNetClient();
         CompletableFuture<RpcResponse> responseFuture  = new CompletableFuture<>();
-        netClient.connect(serviceMetaInfo.getServicePort(), serviceMetaInfo.getServiceHost(),
+        NET_CLIENT.connect(serviceMetaInfo.getServicePort(), serviceMetaInfo.getServiceHost(),
                 result -> {
                     if (!result.succeeded()){
                         System.err.println("Failed to connect to TCP server");
@@ -42,24 +59,15 @@ public class VertxTcpClient {
                         return;
                     }
                     NetSocket socket = result.result();
-                    //发送数据
                     //构造消息
-                    ProtocolMessage<RpcRequest> protocolMessage = new ProtocolMessage<>();
-                    ProtocolMessage.Header header = new ProtocolMessage.Header();
-                    header.setMagic(ProtocolConstant.PROTOCOL_MAGIC);
-                    header.setVersion(ProtocolConstant.PROTOCOL_VERSION);
-                    header.setSerializer((byte) ProtocolMessageSerializerEnum.getEnumByValue(RpcApplication.getRpcConfig().getSerializer()).getKey());
-                    header.setType((byte) ProtocolMessageTypeEnum.REQUEST.getKey());
-                    // 生成全局请求 ID
-                    header.setRequestId(IdUtil.getSnowflakeNextId());
-                    protocolMessage.setHeader(header);
-                    protocolMessage.setBody(rpcRequest);
+                    ProtocolMessage<RpcRequest> protocolMessage = buildMessage(rpcRequest);
                     //编码请求
                     try{
                         Buffer encodeBuffer = ProtocolMessageEncoder.encode(protocolMessage);
                         socket.write(encodeBuffer);
                     }catch (IOException e){
-                        throw new RuntimeException("协议消息编码错误");
+                        responseFuture.completeExceptionally(new RuntimeException("协议消息编码错误", e));
+                        return;
                     }
 
                     //接受响应
@@ -68,13 +76,26 @@ public class VertxTcpClient {
                             ProtocolMessage<RpcResponse> rpcResponseProtocolMessage = (ProtocolMessage<RpcResponse>) ProtocolMessageDecoder.decode(buffer);
                             responseFuture.complete(rpcResponseProtocolMessage.getBody());
                         } catch (IOException e) {
-                            throw new RuntimeException("协议消息解码错误");
+                            responseFuture.completeExceptionally(new RuntimeException("协议消息解码错误", e));
                         }
                     });
                     socket.handler(bufferHandlerWrapper);
                 });
         RpcResponse rpcResponse = responseFuture.get();
-        netClient.close();
         return rpcResponse;
+    }
+
+    private static ProtocolMessage<RpcRequest> buildMessage(RpcRequest rpcRequest) {
+        ProtocolMessage<RpcRequest> protocolMessage = new ProtocolMessage<>();
+        ProtocolMessage.Header header = new ProtocolMessage.Header();
+        header.setMagic(ProtocolConstant.PROTOCOL_MAGIC);
+        header.setVersion(ProtocolConstant.PROTOCOL_VERSION);
+        header.setSerializer((byte) ProtocolMessageSerializerEnum.getEnumByValue(RpcApplication.getRpcConfig().getSerializer()).getKey());
+        header.setType((byte) ProtocolMessageTypeEnum.REQUEST.getKey());
+        // 生成全局请求 ID
+        header.setRequestId(IdUtil.getSnowflakeNextId());
+        protocolMessage.setHeader(header);
+        protocolMessage.setBody(rpcRequest);
+        return protocolMessage;
     }
 }
