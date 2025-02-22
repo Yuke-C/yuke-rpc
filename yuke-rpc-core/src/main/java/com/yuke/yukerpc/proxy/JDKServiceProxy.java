@@ -83,7 +83,7 @@ public class JDKServiceProxy implements InvocationHandler {
             try {
                 RetryStrategy retryStrategy = RetryStrategyFactory.getInstance(rpcConfig.getRetryStrategy());
                 rpcResponse = retryStrategy.doRetry(() ->
-                        VertxTcpClient.doRequest(rpcRequest, selectedServiceMetaInfo)
+                        VertxTcpClient.doRequest(rpcRequest, selectedServiceMetaInfo).get()
                 );
             }catch (Exception e){
                 // 容错机制

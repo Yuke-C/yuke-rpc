@@ -4,8 +4,16 @@
     <file url="file://$PROJECT_DIR$/example-springboot-consumer/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/example-springboot-consumer/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/example-springboot-provider/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/example-springboot-provider/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/example-springboot-provider2/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/example-springboot-provider2/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/example-springboot/boss/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/example-springboot/boss/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/example-springboot/common/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/example-springboot/employee/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/example-springboot/employee/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/example-springboot/manager/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/example-springboot/manager/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/yuke-rpc-spring-boot-starter/src/main/java" charset="UTF-8" />
     <file url="PROJECT" charset="UTF-8" />
   </component>

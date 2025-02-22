@@ -7,13 +7,15 @@
         <option value="$PROJECT_DIR$/pom.xml" />
         <option value="$PROJECT_DIR$/yuke-rpc-core/pom.xml" />
         <option value="$PROJECT_DIR$/yuke-rpc-spring-boot-starter/pom.xml" />
-        <option value="$PROJECT_DIR$/example-springboot-provider/pom.xml" />
-        <option value="$PROJECT_DIR$/example-springboot-consumer/pom.xml" />
-        <option value="$PROJECT_DIR$/example-springboot-provider2/pom.xml" />
+        <option value="$PROJECT_DIR$/example-springboot/common/pom.xml" />
+        <option value="$PROJECT_DIR$/example-springboot/boss/pom.xml" />
+        <option value="$PROJECT_DIR$/example-springboot/Manager/pom.xml" />
+        <option value="$PROJECT_DIR$/example-springboot/employee/pom.xml" />
       </list>
     </option>
     <option name="ignoredFiles">
       <set>
+        <option value="$PROJECT_DIR$/example-common/pom.xml" />
         <option value="$PROJECT_DIR$/example-consumer/pom.xml" />
         <option value="$PROJECT_DIR$/example-provider/pom.xml" />
       </set>
