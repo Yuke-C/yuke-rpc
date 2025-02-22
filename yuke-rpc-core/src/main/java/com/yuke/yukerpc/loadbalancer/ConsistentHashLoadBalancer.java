@@ -2,6 +2,7 @@ package com.yuke.yukerpc.loadbalancer;
 
 import com.yuke.yukerpc.model.ServiceMetaInfo;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -14,7 +15,7 @@ public class ConsistentHashLoadBalancer implements LoadBalancer{
     /**
      * 一致性 Hash 环，存放虚拟节点
      */
-    private final TreeMap<Integer,ServiceMetaInfo> virtualNodes=new TreeMap<>();
+    private final HashMap<String,TreeMap<Integer,ServiceMetaInfo>> map=new HashMap<>();
 
     /**
      * 虚拟节点数
@@ -26,6 +27,14 @@ public class ConsistentHashLoadBalancer implements LoadBalancer{
         if (serviceMetaInfoList.isEmpty()) {
             return null;
         }
+        //构建一致性Hash环
+        String serviceName = serviceMetaInfoList.get(0).getServiceName();
+        TreeMap<Integer, ServiceMetaInfo> virtualNodes;
+        if (!map.containsKey(serviceName)){
+            virtualNodes = new TreeMap<>();
+            map.put(serviceName,virtualNodes);
+        }
+        virtualNodes = map.get(serviceName);
 
         //构建虚拟节点环
         for (ServiceMetaInfo serviceMetaInfo : serviceMetaInfoList) {
