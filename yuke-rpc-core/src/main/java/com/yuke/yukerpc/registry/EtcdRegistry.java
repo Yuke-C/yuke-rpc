@@ -9,15 +9,21 @@ import cn.hutool.json.JSONUtil;
 import com.yuke.yukerpc.config.RegistryConfig;
 import com.yuke.yukerpc.model.ServiceMetaInfo;
 import io.etcd.jetcd.*;
+import io.etcd.jetcd.lease.LeaseKeepAliveResponse;
 import io.etcd.jetcd.options.GetOption;
 import io.etcd.jetcd.options.PutOption;
+import io.etcd.jetcd.options.WatchOption;
 import io.etcd.jetcd.watch.WatchEvent;
+import io.grpc.Status;
+import io.grpc.StatusRuntimeException;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
 public class EtcdRegistry implements Registry{
@@ -29,7 +35,7 @@ public class EtcdRegistry implements Registry{
     /**
      * 本机注册的节点key信息（用于维护续期）
      */
-    private final Set<String> localRegisterNodeKeySet=new HashSet<>();
+    private final Set<String> localRegisterNodeKeySet=new ConcurrentHashSet<>();
 
     /**
      * 根节点
@@ -42,9 +48,20 @@ public class EtcdRegistry implements Registry{
     private final RegistryServiceMultiCache registryServiceCache=new RegistryServiceMultiCache();
 
     /**
+     * 添加用于保存租约ID和ServiceMetaInfo的映射
+     */
+    private final Map<String, Long> keyToLeaseIdMap = new ConcurrentHashMap<>();
+    private final Map<String, ServiceMetaInfo> keyToServiceMetaInfoMap = new ConcurrentHashMap<>();
+
+    /**
      * 正在监听的key集合
      */
     private final Set<String> watchingKeySet=new ConcurrentHashSet<>();
+
+    /**
+     * 保存Watcher以便后续关闭
+     */
+    private final Map<String, Watch.Watcher> watcherMap = new ConcurrentHashMap<>();
 
     @Override
     public void init(RegistryConfig registryConfig) {
@@ -73,6 +90,10 @@ public class EtcdRegistry implements Registry{
         PutOption putOption = PutOption.builder().withLeaseId(leaseId).build();
         kvClient.put(key,value,putOption).get();
 
+        // 保存租约ID和服务元信息
+        keyToLeaseIdMap.put(registerKey, leaseId);
+        keyToServiceMetaInfoMap.put(registerKey, serviceMetaInfo);
+
         //添加节点信息到本地缓存
         localRegisterNodeKeySet.add(registerKey);
 
@@ -82,6 +103,11 @@ public class EtcdRegistry implements Registry{
     public void unRegister(ServiceMetaInfo serviceMetaInfo) {
         String registerKey=ETCD_ROOT_PATH+serviceMetaInfo.getServiceNodeKey();
         kvClient.delete(ByteSequence.from(ETCD_ROOT_PATH+serviceMetaInfo.getServiceNodeKey(),StandardCharsets.UTF_8));
+
+        // 删除租约ID和服务元信息
+        keyToLeaseIdMap.remove(registerKey);
+        keyToServiceMetaInfoMap.remove(registerKey);
+
         //从本地缓存移除
         localRegisterNodeKeySet.remove(registerKey);
     }
@@ -133,7 +159,11 @@ public class EtcdRegistry implements Registry{
                 throw new RuntimeException(key+"节点下线失败");
             }
         }
-
+        CronUtil.stop();
+        // 关闭所有Watcher
+        watcherMap.values().forEach(Watch.Watcher::close);
+        watcherMap.clear();
+        watchingKeySet.clear();
         //释放资源
         if (kvClient!=null){
             kvClient.close();
@@ -145,55 +175,85 @@ public class EtcdRegistry implements Registry{
 
     @Override
     public void heartBeat() {
-        //10秒续签一次
-        CronUtil.schedule("*/10 * * * * *", new Task() {
-            @Override
-            public void execute() {
-                for (String key : localRegisterNodeKeySet) {
-                    try {
-                        List<KeyValue> keyValues = kvClient.get(ByteSequence.from(key, StandardCharsets.UTF_8))
-                                .get()
-                                .getKvs();
-                        //该节点已过期（需要重启节点才能重新注册）
-                        if (CollUtil.isEmpty(keyValues)){
-                            continue;
+        CronUtil.schedule("*/10 * * * * *", (Task) () -> {
+            for (String key : localRegisterNodeKeySet) {
+                Long leaseId = keyToLeaseIdMap.get(key);
+                if (leaseId == null) continue;
+
+                try {
+                    // 发送一次保活请求
+                    LeaseKeepAliveResponse response = client.getLeaseClient().keepAliveOnce(leaseId).get();
+                    System.out.println(key+"续约成功，租约ID: " + leaseId + ", 新的TTL: " + response.getTTL());
+                } catch (Exception e) {
+                    System.err.println("续约失败，尝试重新注册: " + key);
+                    ServiceMetaInfo serviceMetaInfo = keyToServiceMetaInfoMap.get(key);
+                    if (serviceMetaInfo != null) {
+                        try {
+                            // 尝试撤销旧租约（允许租约不存在）
+                            try {
+                                client.getLeaseClient().revoke(leaseId).get();
+                            } catch (ExecutionException ex) {
+                                if (ex.getCause() instanceof StatusRuntimeException) {
+                                    StatusRuntimeException sre = (StatusRuntimeException) ex.getCause();
+                                    if (sre.getStatus().getCode() == Status.Code.NOT_FOUND) {
+                                        System.out.println(key+"租约已自动过期，无需撤销: " + leaseId);
+                                    } else {
+                                        throw ex;
+                                    }
+                                } else {
+                                    throw ex;
+                                }
+                            } finally {
+                                // 强制清理本地记录
+                                keyToLeaseIdMap.remove(key);
+                                keyToServiceMetaInfoMap.remove(key);
+                                localRegisterNodeKeySet.remove(key);
+                            }
+                            // 重新注册服务
+                            register(serviceMetaInfo);
+                            System.out.println("重新注册成功: " + key);
+                        } catch (Exception ex) {
+                            System.err.println("重新注册失败: " + key);
+                            ex.printStackTrace();
                         }
-                        //节点未过期，重新注册（相当于续签）
-                        KeyValue keyValue = keyValues.get(0);
-                        String value = keyValue.getValue().toString(StandardCharsets.UTF_8);
-                        ServiceMetaInfo serviceMetaInfo = JSONUtil.toBean(value, ServiceMetaInfo.class);
-                        register(serviceMetaInfo);
-                    }catch (Exception e){
-                        throw new RuntimeException(key+"续签失败",e);
                     }
                 }
             }
         });
-        //支持秒级别定时任务
         CronUtil.setMatchSecond(true);
         CronUtil.start();
     }
 
     @Override
-    public void watch(String serviceNodeKey,String serviceKey) {
-        Watch watchClient = client.getWatchClient();
-        boolean newWatch = watchingKeySet.add(serviceNodeKey);
-        if(newWatch){
-            watchClient.watch(ByteSequence.from(serviceNodeKey,StandardCharsets.UTF_8),response ->{
-                for (WatchEvent event : response.getEvents()) {
-                    switch (event.getEventType()){
-                        //key删除时触发
-                        case DELETE:
-                            registryServiceCache.clearCache(serviceKey);
-                            break;
-                        case PUT:
-                        default:
-                            break;
-                    }
-                }
-            });
-
+    public void watch(String servicNodeKey,String serviceKey) {
+        String watchPrefix=ETCD_ROOT_PATH+serviceKey+"/";
+        boolean newWatch = watchingKeySet.add(watchPrefix);
+        if (!newWatch) {
+            return;
         }
+
+        Watch watchClient = client.getWatchClient();
+        WatchOption watchOption = WatchOption.builder()
+                .isPrefix(true) // 启用前缀监听
+                .build();
+
+        Watch.Watcher watcher = watchClient.watch(
+                ByteSequence.from(watchPrefix, StandardCharsets.UTF_8),
+                watchOption,
+                response -> {
+                    for (WatchEvent event : response.getEvents()) {
+                        switch (event.getEventType()) {
+                            case DELETE:
+                            case PUT:
+                                registryServiceCache.clearCache(serviceKey);
+                                break;
+                            default:
+                                break;
+                        }
+                    }
+                });
+        // 保存Watcher以便后续关闭
+        watcherMap.put(watchPrefix, watcher);
     }
 
 }
