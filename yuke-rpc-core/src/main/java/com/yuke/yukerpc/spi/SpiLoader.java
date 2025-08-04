@@ -127,12 +127,4 @@ public class SpiLoader {
         loaderMap.put(loadClass.getName(),keyClassMap);
         return keyClassMap;
     }
-
-    public static void main(String[] args) {
-        loadAll();
-        System.out.println(loaderMap);
-        Serializer serializer = getInstance(Serializer.class, "jdk");
-        System.out.println(serializer);
-    }
-
 }
