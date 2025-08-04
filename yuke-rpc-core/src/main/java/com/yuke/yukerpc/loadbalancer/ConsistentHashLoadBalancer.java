@@ -36,16 +36,20 @@ public class ConsistentHashLoadBalancer implements LoadBalancer{
         }
         virtualNodes = map.get(serviceName);
 
+        //哈希环最大哈希值
+        int maxHash=0;
+
         //构建虚拟节点环
         for (ServiceMetaInfo serviceMetaInfo : serviceMetaInfoList) {
             for (int i = 0; i < VIRTUAL_NODE_NUM; i++) {
                 int hash = getHash(serviceMetaInfo.getServiceAddress() + "#" + i);
+                maxHash=Math.max(maxHash,hash);
                 virtualNodes.put(hash,serviceMetaInfo);
             }
         }
 
         // 获取调用请求的 hash 值
-        int hash=getHash(requestParams);
+        int hash=getHash(requestParams)%maxHash;
 
         // 选择最接近且大于等于调用请求 hash 值的虚拟节点
         Map.Entry<Integer, ServiceMetaInfo> entry = virtualNodes.ceilingEntry(hash);
@@ -63,6 +67,6 @@ public class ConsistentHashLoadBalancer implements LoadBalancer{
      * @return
      */
     private int getHash(Object key){
-        return key.hashCode();
+        return key.hashCode()>0?key.hashCode():-key.hashCode();
     }
 }
