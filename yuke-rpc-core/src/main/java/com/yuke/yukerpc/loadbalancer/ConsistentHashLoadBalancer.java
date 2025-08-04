@@ -2,10 +2,7 @@ package com.yuke.yukerpc.loadbalancer;
 
 import com.yuke.yukerpc.model.ServiceMetaInfo;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.*;
 
 /**
  * 一致性哈希负载均衡器
@@ -38,11 +35,12 @@ public class ConsistentHashLoadBalancer implements LoadBalancer{
 
         //哈希环最大哈希值
         int maxHash=0;
+        Random random = new Random();
 
         //构建虚拟节点环
         for (ServiceMetaInfo serviceMetaInfo : serviceMetaInfoList) {
             for (int i = 0; i < VIRTUAL_NODE_NUM; i++) {
-                int hash = getHash(serviceMetaInfo.getServiceAddress() + "#" + i);
+                int hash = getHash(serviceMetaInfo.getServiceAddress() + "#" + i+"-"+random.nextInt());
                 maxHash=Math.max(maxHash,hash);
                 virtualNodes.put(hash,serviceMetaInfo);
             }
