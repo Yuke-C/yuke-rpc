@@ -16,4 +16,9 @@ public class BossServiceImpl implements BossService {
         System.out.println("hello,go to work");
         return managerService.working();
     }
+
+    @Override
+    public String retryStrategyTest() {
+        return managerService.retryStrategyTest();
+    }
 }

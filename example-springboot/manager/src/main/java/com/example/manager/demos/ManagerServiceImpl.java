@@ -6,6 +6,8 @@ import com.example.common.service.ManagerService;
 import com.yuke.yukerpc.springboot.starter.annotation.RpcReference;
 import com.yuke.yukerpc.springboot.starter.annotation.RpcService;
 
+import java.sql.Time;
+
 @RpcService
 public class ManagerServiceImpl implements ManagerService {
 
@@ -24,5 +26,15 @@ public class ManagerServiceImpl implements ManagerService {
     public String working() {
         System.out.println("Boss,I'm working");
         return employeeService.working();
+    }
+
+    @Override
+    public String retryStrategyTest() {
+        try {
+            Thread.sleep(20000);
+        }catch (Exception e) {
+            throw new RuntimeException();
+        }
+        return "success";
     }
 }

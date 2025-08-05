@@ -5,4 +5,6 @@ public interface ManagerService {
     String helloBoss();
 
     String working();
+
+    String retryStrategyTest();
 }
