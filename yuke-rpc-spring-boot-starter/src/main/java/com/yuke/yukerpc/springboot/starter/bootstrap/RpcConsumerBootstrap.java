@@ -1,6 +1,5 @@
 package com.yuke.yukerpc.springboot.starter.bootstrap;
 
-import com.yuke.yukerpc.proxy.CglibServiceProxyFactory;
 import com.yuke.yukerpc.proxy.JDKServiceProxyFactory;
 import com.yuke.yukerpc.springboot.starter.annotation.RpcReference;
 import com.yuke.yukerpc.springboot.starter.config.ReferenceConfig;
@@ -9,7 +8,6 @@ import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.BeanPostProcessor;
 
 import java.lang.reflect.Field;
-import java.util.HashMap;
 import java.util.Map;
 
 /**
