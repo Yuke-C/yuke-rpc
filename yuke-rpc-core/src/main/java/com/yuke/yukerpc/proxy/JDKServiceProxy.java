@@ -29,13 +29,23 @@ import io.vertx.core.net.NetClient;
 import io.vertx.core.net.NetSocket;
 
 import java.io.IOException;
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 public class JDKServiceProxy implements InvocationHandler {
+
+    Map<String, Object> referenceConfig; // 注解配置信息
+
+    // 构造器接收目标对象
+    public JDKServiceProxy(Map<String, Object> referenceConfig) {
+        this.referenceConfig = referenceConfig;
+    }
 
     /**
      * 调用代理
@@ -71,7 +81,12 @@ public class JDKServiceProxy implements InvocationHandler {
                 throw new RuntimeException("暂无服务地址");
             }
             // 负载均衡
-            LoadBalancer loadBalancer = LoadBalancerFactory.getInstance(rpcConfig.getLoadBalancer());
+            //从注解中读取配置
+            LoadBalancer loadBalancer =LoadBalancerFactory.getInstance(referenceConfig.get("loadBalancer").toString());
+            if (loadBalancer==null){
+                //从配置文件中读取配置
+                loadBalancer = LoadBalancerFactory.getInstance(rpcConfig.getLoadBalancer());
+            }
             // 将调用方法名（请求路径）作为负载均衡参数
             HashMap<String, Object> requestParams = new HashMap<>();
             requestParams.put("methodName",rpcRequest.getMethodName());
@@ -82,13 +97,19 @@ public class JDKServiceProxy implements InvocationHandler {
             // 使用重试机制
             RpcResponse rpcResponse;
             try {
-                RetryStrategy retryStrategy = RetryStrategyFactory.getInstance(rpcConfig.getRetryStrategy());
+                RetryStrategy retryStrategy =RetryStrategyFactory.getInstance(referenceConfig.get("retryStrategy").toString());
+                if (retryStrategy==null){
+                    retryStrategy = RetryStrategyFactory.getInstance(rpcConfig.getRetryStrategy());
+                }
                 rpcResponse = retryStrategy.doRetry(() ->
                         VertxTcpClient.doRequest(rpcRequest, selectedServiceMetaInfo).get()
                 );
             }catch (Exception e){
                 // 容错机制
-                TolerantStrategy tolerantStrategy = TolerantStrategyFactory.getInstance(rpcConfig.getTolerantStrategy());
+                TolerantStrategy tolerantStrategy =TolerantStrategyFactory.getInstance(referenceConfig.get("tolerantStrategy").toString());
+                if (tolerantStrategy==null){
+                    tolerantStrategy = TolerantStrategyFactory.getInstance(rpcConfig.getTolerantStrategy());
+                }
                 rpcResponse = tolerantStrategy.doTolerant(null, e);
             }
             return rpcResponse.getData();

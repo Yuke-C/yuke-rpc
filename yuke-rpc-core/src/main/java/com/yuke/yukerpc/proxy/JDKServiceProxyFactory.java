@@ -4,6 +4,7 @@ package com.yuke.yukerpc.proxy;
 import com.yuke.yukerpc.RpcApplication;
 
 import java.lang.reflect.Proxy;
+import java.util.Map;
 
 /**
  * 服务代理工厂（用于创建代理对象）
@@ -16,8 +17,9 @@ public class JDKServiceProxyFactory {
      * @param <T>
      * @return
      */
-    public  static <T> T getProxy(Class<T> serviceClass){
-        if (RpcApplication.getRpcConfig().isMock()){
+    public  static <T> T getProxy(Class<T> serviceClass, Map<String, Object> referenceConfig){
+        if ((boolean) referenceConfig.get("mock")||
+                RpcApplication.getRpcConfig().isMock()){
             return getMock(serviceClass);
         }
 
@@ -27,7 +29,7 @@ public class JDKServiceProxyFactory {
                 //代理类需要实现的接口列表，这里只需要代理 serviceClass 指定的接口
                 new Class[] {serviceClass},
                 //一个调用处理器（InvocationHandler）实例，当代理对象的方法被调用时，将会转发到这个调用处理器
-                new JDKServiceProxy());
+                new JDKServiceProxy(referenceConfig));
     }
 
     /**

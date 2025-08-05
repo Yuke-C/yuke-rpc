@@ -3,11 +3,14 @@ package com.yuke.yukerpc.springboot.starter.bootstrap;
 import com.yuke.yukerpc.proxy.CglibServiceProxyFactory;
 import com.yuke.yukerpc.proxy.JDKServiceProxyFactory;
 import com.yuke.yukerpc.springboot.starter.annotation.RpcReference;
+import com.yuke.yukerpc.springboot.starter.config.ReferenceConfig;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.BeanPostProcessor;
 
 import java.lang.reflect.Field;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Rpc 服务消费者启动
@@ -32,14 +35,16 @@ public class RpcConsumerBootstrap implements BeanPostProcessor {
         for (Field field : declaredFields) {
             RpcReference rpcReference = field.getAnnotation(RpcReference.class);
             if (rpcReference != null) {
+                // 解析字段注解配置
+                ReferenceConfig referenceConfig = ReferenceConfig.fromAnnotation(rpcReference);
+                Map<String, Object> referenceConfigMap = referenceConfig.toMap();
                 // 为属性生成代理对象
                 Class<?> interfaceClass = rpcReference.interfaceClass();
                 if (interfaceClass == void.class) {
                     interfaceClass = field.getType();
                 }
                 field.setAccessible(true);
-                Object proxyObject = JDKServiceProxyFactory.getProxy(interfaceClass);
-//                Object proxyObject = CglibServiceProxyFactory.getProxy(interfaceClass);
+                Object proxyObject = JDKServiceProxyFactory.getProxy(interfaceClass,referenceConfigMap);
                 try {
                     field.set(bean, proxyObject);
                     field.setAccessible(false);
