@@ -13,6 +13,7 @@
         <module name="manager" />
         <module name="example-springboot" />
         <module name="employee" />
+        <module name="Manager" />
         <module name="yuke-rpc-spring-boot-starter" />
       </profile>
     </annotationProcessing>

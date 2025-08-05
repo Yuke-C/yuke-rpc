@@ -75,6 +75,7 @@ public class JDKServiceProxy implements InvocationHandler {
             // 将调用方法名（请求路径）作为负载均衡参数
             HashMap<String, Object> requestParams = new HashMap<>();
             requestParams.put("methodName",rpcRequest.getMethodName());
+            requestParams.put("args",rpcRequest.getArgs());
             ServiceMetaInfo selectedServiceMetaInfo = loadBalancer.select(requestParams,serviceMetaInfoList);
 
             //发送 TCP 请求
@@ -91,15 +92,6 @@ public class JDKServiceProxy implements InvocationHandler {
                 rpcResponse = tolerantStrategy.doTolerant(null, e);
             }
             return rpcResponse.getData();
-
-            //发送 HTTP 请求
-//            try (HttpResponse httpResponse = HttpRequest.post(selectedServiceMetaInfo.getServiceAddress())
-//            .body(bytes)
-//            .execute()){
-//                byte[] result = httpResponse.bodyBytes();
-//                RpcResponse rpcResponse = serializer.deserialize(result, RpcResponse.class);
-//                return rpcResponse.getData();
-//            }
         }catch (Exception e){
             e.printStackTrace();
             throw new RuntimeException("调用失败");
