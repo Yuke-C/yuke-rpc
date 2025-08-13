@@ -9,10 +9,6 @@
     <packaging>pom</packaging>
     <version>1.0-SNAPSHOT</version>
     <modules>
-        <module>example-consumer</module>
-        <module>example-common</module>
-        <module>example-provider</module>
-<!--        <module>yuke-rpc-easy</module>-->
         <module>yuke-rpc-core</module>
         <module>example-springboot</module>
     </modules>
